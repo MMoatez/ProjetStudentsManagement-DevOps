@@ -9,7 +9,7 @@ pipeline {
     stages {
         stage('GIT') {
             steps {
-                git branch: 'Master',
+                git branch: 'master',
                     url: 'https://github.com/MMoatez/ProjetStudentsManagement-DevOps.git'
             }
         }
