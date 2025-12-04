@@ -15,7 +15,7 @@ pipeline {
         }
 
          
-      ge('Compile Stage') {
+      stage('Compile Stage') {
             steps {
                 sh 'mvn clean compile'
             }
