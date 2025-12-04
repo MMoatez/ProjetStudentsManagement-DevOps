@@ -14,10 +14,11 @@ pipeline {
             }
         }
 
-            }
-            stage('Compile Stage') {
+         
+      ge('Compile Stage') {
             steps {
                 sh 'mvn clean compile'
             }
         }
-            }
+            }   
+}
