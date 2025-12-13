@@ -6,10 +6,11 @@ pipeline {
         maven 'M2_HOME'
     }
 
-    environment {
-        DOCKER_IMAGE = 'MoatezMathlouthi/projetstudents'
-        DOCKER_TAG = 'latest'
-    }
+   environment {
+    DOCKER_IMAGE = 'moatezmathlouthi/projetstudents'
+    DOCKER_TAG = 'latest'
+}
+
 
     stages {
 
