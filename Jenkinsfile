@@ -7,7 +7,7 @@ pipeline {
     }
 
     environment {
-        DOCKER_IMAGE = 'MoatezMathlouthi/projetstudents'   
+        DOCKER_IMAGE = 'MoatezMathlouthi/projetstudents'
         DOCKER_TAG = 'latest'
     }
 
@@ -32,17 +32,13 @@ pipeline {
             steps {
                 echo 'Building Docker image...'
                 script {
-
-                    // Build image
                     sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
 
-                    echo 'Pushing Docker image to Docker Hub...'
-
-                    // Login & push
+                    echo 'Pushing Docker image...'
                     withCredentials([
                         usernamePassword(
-                            credentialsId: 'dockerhub-credentials', 
-                            usernameVariable: 'DOCKER_USERNAME', 
+                            credentialsId: 'dockerhub-credentials',
+                            usernameVariable: 'DOCKER_USERNAME',
                             passwordVariable: 'DOCKER_PASSWORD'
                         )
                     ]) {
@@ -52,6 +48,7 @@ pipeline {
                 }
             }
         }
+
     }
 
     post {
