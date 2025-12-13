@@ -9,8 +9,6 @@ pipeline {
     environment {
         DOCKER_IMAGE = 'moatezmathlouthi/projetstudents'
         DOCKER_TAG = 'latest'
-        // Ajout de la registry Docker Hub
-        DOCKER_REGISTRY = 'https://index.docker.io/v1/'
     }
     
     stages {
@@ -29,19 +27,35 @@ pipeline {
             }
         }
         
-        stage('Build & Push Docker Image') {
+        stage('Build Docker Image') {
             steps {
                 echo 'Building Docker image...'
                 script {
-                    // Construction de l'image
-                    sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
-                    
-                    echo 'Pushing Docker image to Docker Hub...'
-                    // Utilisation de docker.withRegistry pour une meilleure gestion
-                    docker.withRegistry("${DOCKER_REGISTRY}", 'dockerhub-credentials') {
-                        def dockerImage = docker.image("${DOCKER_IMAGE}:${DOCKER_TAG}")
-                        dockerImage.push()
-                        dockerImage.push('latest')
+                    sh """
+                        docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} .
+                        docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:${BUILD_NUMBER}
+                    """
+                }
+            }
+        }
+        
+        stage('Push Docker Image') {
+            steps {
+                echo 'Pushing Docker image to Docker Hub...'
+                script {
+                    withCredentials([
+                        usernamePassword(
+                            credentialsId: 'dockerhub-credentials',
+                            usernameVariable: 'DOCKER_USER',
+                            passwordVariable: 'DOCKER_PASS'
+                        )
+                    ]) {
+                        sh """
+                            echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin
+                            docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
+                            docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}
+                            docker logout
+                        """
                     }
                 }
             }
@@ -50,7 +64,11 @@ pipeline {
         stage('Cleanup') {
             steps {
                 echo 'Cleaning up unused Docker images...'
-                sh "docker system prune -f"
+                sh """
+                    docker rmi ${DOCKER_IMAGE}:${DOCKER_TAG} || true
+                    docker rmi ${DOCKER_IMAGE}:${BUILD_NUMBER} || true
+                    docker system prune -f
+                """
             }
         }
     }
@@ -59,6 +77,7 @@ pipeline {
         success {
             echo '✅ Pipeline completed successfully!'
             echo "Image pushed: ${DOCKER_IMAGE}:${DOCKER_TAG}"
+            echo "Image also tagged as: ${DOCKER_IMAGE}:${BUILD_NUMBER}"
         }
         failure {
             echo '❌ Pipeline failed!'
