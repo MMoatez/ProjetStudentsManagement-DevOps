@@ -1,69 +1,66 @@
 pipeline {
     agent any
-    
+
     tools {
         jdk 'JAVA_HOME'
         maven 'M2_HOME'
     }
-    
+
     environment {
         DOCKER_IMAGE = 'moatezmathlouthi/projetstudents'
         DOCKER_TAG = 'latest'
     }
-    
+
     stages {
+
         stage('GIT') {
             steps {
-                echo 'Cloning repository...'
+                echo '📥 Cloning repository...'
                 git branch: 'master',
                     url: 'https://github.com/MMoatez/ProjetStudentsManagement-DevOps.git'
             }
         }
-        
-        stage('Build with Maven') {
+
+        stage('Build Maven') {
             steps {
-                echo 'Building project with Maven...'
+                echo '🔨 Building with Maven...'
                 sh 'mvn clean package -DskipTests'
             }
         }
-        
+
         stage('Build Docker Image') {
             steps {
-                echo 'Building Docker image...'
-                script {
+                echo '🐳 Building Docker image...'
+                sh """
+                    docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} .
+                    docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:${BUILD_NUMBER}
+                """
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                echo '🚀 Pushing image to Docker Hub...'
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-credentials',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )
+                ]) {
                     sh """
-                        docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} .
-                        docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:${BUILD_NUMBER}
+                        echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin
+                        docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
+                        docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}
+                        docker logout
                     """
                 }
             }
         }
-        
-        stage('Push Docker Image') {
-            steps {
-                echo 'Pushing Docker image to Docker Hub...'
-                script {
-                    withCredentials([
-                        usernamePassword(
-                            credentialsId: 'dockerhub-credentials',
-                            usernameVariable: 'DOCKER_USER',
-                            passwordVariable: 'DOCKER_PASS'
-                        )
-                    ]) {
-                        sh """
-                            echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin
-                            docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
-                            docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}
-                            docker logout
-                        """
-                    }
-                }
-            }
-        }
-        
+
         stage('Cleanup') {
             steps {
-                echo 'Cleaning up unused Docker images...'
+                echo '🧹 Cleaning Docker images...'
                 sh """
                     docker rmi ${DOCKER_IMAGE}:${DOCKER_TAG} || true
                     docker rmi ${DOCKER_IMAGE}:${BUILD_NUMBER} || true
@@ -72,19 +69,16 @@ pipeline {
             }
         }
     }
-    
+
     post {
         success {
-            echo '✅ Pipeline completed successfully!'
-            echo "Image pushed: ${DOCKER_IMAGE}:${DOCKER_TAG}"
-            echo "Image also tagged as: ${DOCKER_IMAGE}:${BUILD_NUMBER}"
+            echo '✅ Pipeline terminé avec succès'
+            echo "Image: ${DOCKER_IMAGE}:${DOCKER_TAG}"
         }
         failure {
-            echo '❌ Pipeline failed!'
-            echo 'Check the logs above for details.'
+            echo '❌ Pipeline échoué'
         }
         always {
-            echo 'Cleaning workspace...'
             cleanWs()
         }
     }
