@@ -1,6 +1,4 @@
-FROM openjdk:17
-
-WORKDIR /app
+FROM eclipse-temurin:17-jdk
 
 EXPOSE 8089
 
