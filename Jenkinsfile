@@ -93,11 +93,12 @@ pipeline {
             steps {
                 echo '☸️ Deploying to Kubernetes...'
                 // Utilisation d'un Secret File pour kubeconfig
-                withCredentials([file(credentialsId: 'kubeconfig-file', variable: 'KUBECONFIG')]) {
+withCredentials([string(credentialsId: 'kubeconfig-content', variable: 'KUBECONFIG_CONTENT')]) {
                     sh '''
-                        mkdir -p ~/.kube
-                        cp $KUBECONFIG ~/.kube/config
-                        chmod 600 ~/.kube/config
+                         mkdir -p ~/.kube
+                                    echo "$KUBECONFIG_CONTENT" > ~/.kube/config
+                                    chmod 600 ~/.kube/config
+                                    kubectl cluster-info
 
                         echo "Checking cluster access..."
                         kubectl cluster-info
