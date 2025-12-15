@@ -30,7 +30,7 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 echo '🔍 Running SonarQube analysis...'
-                withSonarQubeEnv('SonarQubeServer') { // Mettre le nom de ton serveur SonarQube Jenkins
+                withSonarQubeEnv('SonarQubeServer') { 
                     sh 'mvn sonar:sonar -Dsonar.projectKey=student-management -Dsonar.host.url=$SONAR_HOST_URL -Dsonar.login=$SONAR_AUTH_TOKEN -DskipTests'
                 }
             }
