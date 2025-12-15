@@ -22,7 +22,7 @@ pipeline {
             }
         }
 
-        /* ===================== BUILD ===================== */
+        /* ===================== BUILD MAVEN ===================== */
         stage('Build Maven') {
             steps {
                 echo '🔨 Building project with Maven...'
@@ -76,7 +76,7 @@ pipeline {
             }
         }
 
-        /* ===================== CLEANUP ===================== */
+        /* ===================== DOCKER CLEANUP ===================== */
         stage('Docker Cleanup') {
             steps {
                 echo '🧹 Cleaning local Docker images...'
@@ -90,42 +90,43 @@ pipeline {
 
         /* ===================== KUBERNETES DEPLOY ===================== */
         stage('Deploy to Kubernetes') {
-    steps {
-        echo '☸️ Deploying to Kubernetes...'
-        // Remplace 'kubeconfig-file' par l'ID exact de ton secret file
-        withCredentials([file(credentialsId: 'kubeconfig-file', variable: 'KUBECONFIG')]) {
-            sh '''
-                mkdir -p ~/.kube
-                cp $KUBECONFIG ~/.kube/config
-                chmod 600 ~/.kube/config
+            steps {
+                echo '☸️ Deploying to Kubernetes...'
+                // Utilisation d'un Secret File pour kubeconfig
+                withCredentials([file(credentialsId: 'kubeconfig-file', variable: 'KUBECONFIG')]) {
+                    sh '''
+                        mkdir -p ~/.kube
+                        cp $KUBECONFIG ~/.kube/config
+                        chmod 600 ~/.kube/config
 
-                echo "Checking cluster access..."
-                kubectl cluster-info
+                        echo "Checking cluster access..."
+                        kubectl cluster-info
 
-                echo "Creating namespace if needed..."
-                kubectl get namespace devops || kubectl create namespace devops
+                        echo "Creating namespace if needed..."
+                        kubectl get namespace devops || kubectl create namespace devops
 
-                echo "Deploying MySQL..."
-                kubectl apply -f kubernetes/mysql-deployment.yaml -n devops
+                        echo "Deploying MySQL..."
+                        kubectl apply -f kubernetes/mysql-deployment.yaml -n devops
 
-                echo "Deploying Spring Boot..."
-                kubectl apply -f kubernetes/spring-deployment.yaml -n devops
+                        echo "Deploying Spring Boot..."
+                        kubectl apply -f kubernetes/spring-deployment.yaml -n devops
 
-                echo "Restarting Spring deployment..."
-                kubectl rollout restart deployment spring-app -n devops
-            '''
+                        echo "Restarting Spring deployment..."
+                        kubectl rollout restart deployment spring-app -n devops
+                    '''
+                }
+            }
         }
-    }
-}
 
-
-        /* ===================== VERIFY ===================== */
+        /* ===================== VERIFY DEPLOYMENT ===================== */
         stage('Verify Deployment') {
             steps {
                 echo '🔎 Verifying deployment...'
-                withCredentials([string(credentialsId: 'kubeconfig-content', variable: 'KUBECONFIG_CONTENT')]) {
+                withCredentials([file(credentialsId: 'kubeconfig-file', variable: 'KUBECONFIG')]) {
                     sh '''
-                        export KUBECONFIG=~/.kube/config
+                        mkdir -p ~/.kube
+                        cp $KUBECONFIG ~/.kube/config
+                        chmod 600 ~/.kube/config
                         kubectl get pods -n devops
                         kubectl get svc -n devops
                         kubectl get deployments -n devops
@@ -133,8 +134,10 @@ pipeline {
                 }
             }
         }
+
     }
 
+    /* ===================== POST ===================== */
     post {
         success {
             echo '✅ Pipeline terminé avec succès'
