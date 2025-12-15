@@ -89,57 +89,54 @@ pipeline {
         }
 
         /* ===================== KUBERNETES DEPLOY ===================== */
-      stage('Deploy to Kubernetes') {
-    steps {
-        echo '☸️ Deploying to Kubernetes...'
-        withCredentials([string(credentialsId: 'kubeconfig-content', variable: 'KUBECONFIG_CONTENT')]) {
-            sh '''
-                set +x
+        stage('Deploy to Kubernetes') {
+            steps {
+                echo '☸️ Deploying to Kubernetes...'
+                withCredentials([string(credentialsId: 'kubeconfig-content', variable: 'KUBECONFIG_CONTENT')]) {
+                    sh '''
+                        set +x
 
-                echo "=== Setting up kubeconfig ==="
-                mkdir -p ~/.kube
+                        echo "=== Setting up kubeconfig ==="
+                        mkdir -p ~/.kube
 
-                # Write kubeconfig content safely
-                echo "$KUBECONFIG_CONTENT" > ~/.kube/config
-                chmod 600 ~/.kube/config
+                        echo "$KUBECONFIG_CONTENT" > ~/.kube/config
+                        chmod 600 ~/.kube/config
 
-                echo "Checking cluster access..."
-                kubectl cluster-info
+                        echo "Checking cluster access..."
+                        kubectl cluster-info
 
-                echo "Creating namespace if needed..."
-                kubectl get namespace devops || kubectl create namespace devops
+                        echo "Creating namespace if needed..."
+                        kubectl get namespace devops || kubectl create namespace devops
 
-                echo "Deploying MySQL..."
-                kubectl apply -f kubernetes/mysql-deployment.yaml -n devops
+                        echo "Deploying MySQL..."
+                        kubectl apply -f kubernetes/mysql-deployment.yaml -n devops
 
-                echo "Deploying Spring Boot..."
-                kubectl apply -f kubernetes/spring-deployment.yaml -n devops
+                        echo "Deploying Spring Boot..."
+                        kubectl apply -f kubernetes/spring-deployment.yaml -n devops
 
-                echo "Restarting Spring deployment..."
-                kubectl rollout restart deployment spring-app -n devops
-            '''
+                        echo "Restarting Spring deployment..."
+                        kubectl rollout restart deployment spring-app -n devops
+                    '''
+                }
+            }
         }
-    }
-}
-
 
         /* ===================== VERIFY ===================== */
-stage('Verify Deployment') {
-    steps {
-        echo '🔎 Verifying deployment...'
-        withCredentials([string(credentialsId: 'kubeconfig-content', variable: 'KUBECONFIG_CONTENT')]) {
-            sh '''
-                export KUBECONFIG=~/.kube/config
-                kubectl get pods -n devops
-                kubectl get svc -n devops
-                kubectl get deployments -n devops
-            '''
+        stage('Verify Deployment') {
+            steps {
+                echo '🔎 Verifying deployment...'
+                withCredentials([string(credentialsId: 'kubeconfig-content', variable: 'KUBECONFIG_CONTENT')]) {
+                    sh '''
+                        export KUBECONFIG=~/.kube/config
+                        kubectl get pods -n devops
+                        kubectl get svc -n devops
+                        kubectl get deployments -n devops
+                    '''
+                }
+            }
         }
     }
-}
 
-
-    /* ===================== POST ===================== */
     post {
         success {
             echo '✅ Pipeline terminé avec succès'
