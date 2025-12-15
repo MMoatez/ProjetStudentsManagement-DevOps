@@ -89,48 +89,55 @@ pipeline {
         }
 
         /* ===================== KUBERNETES DEPLOY ===================== */
-        stage('Deploy to Kubernetes') {
-            steps {
-                echo '☸️ Deploying to Kubernetes...'
-                withCredentials([file(credentialsId: 'kubeconfig-file', variable: 'KUBECONFIG')]) {
-                    sh '''
-                        export KUBECONFIG=$KUBECONFIG
+      stage('Deploy to Kubernetes') {
+    steps {
+        echo '☸️ Deploying to Kubernetes...'
+        withCredentials([string(credentialsId: 'kubeconfig-content', variable: 'KUBECONFIG_CONTENT')]) {
+            sh '''
+                set +x
 
-                        echo "Checking cluster access..."
-                        kubectl cluster-info
+                echo "=== Setting up kubeconfig ==="
+                mkdir -p ~/.kube
 
-                        echo "Creating namespace if not exists..."
-                        kubectl get namespace devops || kubectl create namespace devops
+                # Write kubeconfig content safely
+                echo "$KUBECONFIG_CONTENT" > ~/.kube/config
+                chmod 600 ~/.kube/config
 
-                        echo "Deploying MySQL..."
-                        kubectl apply -f kubernetes/mysql-deployment.yaml -n devops
+                echo "Checking cluster access..."
+                kubectl cluster-info
 
-                        echo "Deploying Spring Boot app..."
-                        kubectl apply -f kubernetes/spring-deployment.yaml -n devops
+                echo "Creating namespace if needed..."
+                kubectl get namespace devops || kubectl create namespace devops
 
-                        echo "Restart Spring deployment..."
-                        kubectl rollout restart deployment spring-app -n devops
-                    '''
-                }
-            }
-        }
+                echo "Deploying MySQL..."
+                kubectl apply -f kubernetes/mysql-deployment.yaml -n devops
 
-        /* ===================== VERIFY ===================== */
-        stage('Verify Deployment') {
-            steps {
-                echo '🔎 Verifying Kubernetes deployment...'
-                withCredentials([file(credentialsId: 'kubeconfig-file', variable: 'KUBECONFIG')]) {
-                    sh '''
-                        export KUBECONFIG=$KUBECONFIG
+                echo "Deploying Spring Boot..."
+                kubectl apply -f kubernetes/spring-deployment.yaml -n devops
 
-                        kubectl get pods -n devops
-                        kubectl get svc -n devops
-                        kubectl get deployments -n devops
-                    '''
-                }
-            }
+                echo "Restarting Spring deployment..."
+                kubectl rollout restart deployment spring-app -n devops
+            '''
         }
     }
+}
+
+
+        /* ===================== VERIFY ===================== */
+stage('Verify Deployment') {
+    steps {
+        echo '🔎 Verifying deployment...'
+        withCredentials([string(credentialsId: 'kubeconfig-content', variable: 'KUBECONFIG_CONTENT')]) {
+            sh '''
+                export KUBECONFIG=~/.kube/config
+                kubectl get pods -n devops
+                kubectl get svc -n devops
+                kubectl get deployments -n devops
+            '''
+        }
+    }
+}
+
 
     /* ===================== POST ===================== */
     post {
