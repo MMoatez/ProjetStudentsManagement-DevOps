@@ -90,29 +90,34 @@ pipeline {
 
         /* ===================== KUBERNETES DEPLOY ===================== */
         stage('Deploy to Kubernetes') {
-            steps {
-                echo '☸️ Deploying to Kubernetes...'
-                withCredentials([string(credentialsId: 'kubeconfig-content', variable: 'KUBECONFIG_CONTENT')]) {
-                  sh '''
-    set +x
+    steps {
+        echo '☸️ Deploying to Kubernetes...'
+        // Remplace 'kubeconfig-file' par l'ID exact de ton secret file
+        withCredentials([file(credentialsId: 'kubeconfig-file', variable: 'KUBECONFIG')]) {
+            sh '''
+                mkdir -p ~/.kube
+                cp $KUBECONFIG ~/.kube/config
+                chmod 600 ~/.kube/config
 
-    echo "=== Setting up kubeconfig ==="
-    mkdir -p ~/.kube
+                echo "Checking cluster access..."
+                kubectl cluster-info
 
-    # Write kubeconfig content safely using here-document
-    cat > ~/.kube/config <<EOF
-$KUBECONFIG_CONTENT
-EOF
+                echo "Creating namespace if needed..."
+                kubectl get namespace devops || kubectl create namespace devops
 
-    chmod 600 ~/.kube/config
+                echo "Deploying MySQL..."
+                kubectl apply -f kubernetes/mysql-deployment.yaml -n devops
 
-    echo "Checking cluster access..."
-    kubectl cluster-info
-'''
+                echo "Deploying Spring Boot..."
+                kubectl apply -f kubernetes/spring-deployment.yaml -n devops
 
-                }
-            }
+                echo "Restarting Spring deployment..."
+                kubectl rollout restart deployment spring-app -n devops
+            '''
         }
+    }
+}
+
 
         /* ===================== VERIFY ===================== */
         stage('Verify Deployment') {
