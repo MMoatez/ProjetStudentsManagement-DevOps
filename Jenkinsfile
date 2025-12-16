@@ -88,7 +88,7 @@ pipeline {
             }
         }
 
-        /* ===================== KUBERNETES DEPLOY ===================== */
+        /* ===================== KUBERNETES DEPLOY ===================== 
     stage('Deploy to Kubernetes') {
     steps {
         echo '☸️ Deploying to Kubernetes...'
@@ -116,8 +116,8 @@ pipeline {
         }
     }
 }
-
-        /* ===================== VERIFY DEPLOYMENT ===================== */
+*/
+        /* ===================== VERIFY DEPLOYMENT ===================== 
         stage('Verify Deployment') {
             steps {
                 echo '🔎 Verifying deployment...'
@@ -132,7 +132,7 @@ pipeline {
                     '''
                 }
             }
-        }
+        }*/
 
     }
 
