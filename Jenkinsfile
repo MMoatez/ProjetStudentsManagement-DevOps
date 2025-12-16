@@ -89,35 +89,33 @@ pipeline {
         }
 
         /* ===================== KUBERNETES DEPLOY ===================== */
-        stage('Deploy to Kubernetes') {
-            steps {
-                echo '☸️ Deploying to Kubernetes...'
-                // Utilisation d'un Secret File pour kubeconfig
-withCredentials([string(credentialsId: 'kubeconfig-content', variable: 'KUBECONFIG_CONTENT')]) {
-                    sh '''
-                         mkdir -p ~/.kube
-                                    echo "$KUBECONFIG_CONTENT" > ~/.kube/config
-                                    chmod 600 ~/.kube/config
-                                    kubectl cluster-info
+    stage('Deploy to Kubernetes') {
+    steps {
+        echo '☸️ Deploying to Kubernetes...'
+        withCredentials([string(credentialsId:  'kubeconfig-content', variable: 'KUBECONFIG_BASE64')]) {
+            sh '''
+                mkdir -p ~/.kube
+                echo "$KUBECONFIG_BASE64" | base64 -d > ~/.kube/config
+                chmod 600 ~/.kube/config
+                
+                echo "Checking cluster access..."
+                kubectl cluster-info
 
-                        echo "Checking cluster access..."
-                        kubectl cluster-info
+                echo "Creating namespace if needed..."
+                kubectl get namespace devops || kubectl create namespace devops
 
-                        echo "Creating namespace if needed..."
-                        kubectl get namespace devops || kubectl create namespace devops
+                echo "Deploying MySQL..."
+                kubectl apply -f kubernetes/mysql-deployment.yaml -n devops
 
-                        echo "Deploying MySQL..."
-                        kubectl apply -f kubernetes/mysql-deployment.yaml -n devops
+                echo "Deploying Spring Boot..."
+                kubectl apply -f kubernetes/spring-deployment.yaml -n devops
 
-                        echo "Deploying Spring Boot..."
-                        kubectl apply -f kubernetes/spring-deployment.yaml -n devops
-
-                        echo "Restarting Spring deployment..."
-                        kubectl rollout restart deployment spring-app -n devops
-                    '''
-                }
-            }
+                echo "Restarting Spring deployment..."
+                kubectl rollout restart deployment spring-app -n devops
+            '''
         }
+    }
+}
 
         /* ===================== VERIFY DEPLOYMENT ===================== */
         stage('Verify Deployment') {
